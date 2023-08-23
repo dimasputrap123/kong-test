@@ -1,28 +1,20 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const basicAuth = require('basic-auth');
-require('dotenv').config();
+const multer = require('multer');
 
-function auth(req, res, next) {
-    var user = basicAuth(req);
-    if (!user || !user.name || !user.pass) {
-      res.set('WWW-Authenticate', 'Basic realm=Authorization Required');
-      return res.sendStatus(401);
-    }
-    if (user.name === 'user1' && user.pass === 'pass123') {
-      next();
-    } else {
-      res.set('WWW-Authenticate', 'Basic realm=Authorization Required');
-      return res.sendStatus(401);
-    }
-}
+require('dotenv').config();
 
 const PORT = process.env.PORT;
 
 const app = express();
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+// app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use((req, res, next) => {
+  res.append('X-CLIENT-KEY', req.get('X-CLIENT-KEY'))
+  next()
+})
 
 let products = {
     '001': {
@@ -46,13 +38,12 @@ app.get('/', (req, res, next) => {
 	res.json({"hello": "helloooo"});
 });
 
-app.get('/products', auth, (req, res, next) => {
+app.get('/products', (req, res, next) => {
 	res.json(products);
 });
 
-app.post('/products', auth, (req, res, next) => {
+app.post('/products',multer().none(), (req, res, next) => {
   const body = req.body;
-  console.log('test products body: ',body)
   const id = body.id;
   const name = body.name;
   const quantity = body.quantity;
@@ -70,7 +61,7 @@ app.post('/products', auth, (req, res, next) => {
 	res.status(201).json({'message': 'product created', 'data': body});
 });
 
-app.get('/products/:id', auth, (req, res, next) => {
+app.get('/products/:id', (req, res, next) => {
 	res.json(products[req.params.id]);
 });
 
